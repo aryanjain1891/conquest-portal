@@ -39,12 +39,13 @@ function App() {
   const { setUser, getUserData, tokenRefreshFunction } = useContext(WebContext);
   // const location = useLocation();
   useEffect(() => {
-    console.log(window.location.pathname + window.location.search); // for debugging
-    ReactGA.send({
-      hitType: "pageview",
-      page: location.pathname + location.search,
-      title: "Custom Title",
-    });
+    if (GA_MEASUREMENT_ID) {
+      ReactGA.send({
+        hitType: "pageview",
+        page: window.location.pathname + window.location.search,
+        title: "Custom Title",
+      });
+    }
 
     if (localStorage.getItem("userData")) {
       console.log("reload");

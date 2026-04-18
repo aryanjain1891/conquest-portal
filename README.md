@@ -1,70 +1,51 @@
 # Conquest Portal
 
-A full-stack startup ecosystem portal: startups, mentors, investors, experts, meetings, forms, and connections. React SPA + Django REST API.
+A web portal for running a startup accelerator. Startups, mentors, coaches, experts, investors, and admins all log in and do their thing in one place.
 
-This is an **independent** fork. It does not depend on any conquest.org.in domain. Every external URL and third-party credential is configurable via environment variables so you can run it against your own infrastructure.
+- **Startups** manage their profile, book calls with mentors and coaches, respond to forms, track connections.
+- **Mentors / Coaches / Experts** publish weekly slot availability, accept meeting requests, view their pod.
+- **Alumni and investors** browse startups and request connections.
+- **Admins** run the cohort: approve connections, send announcements, schedule events, manage forms.
 
----
-
-## Stack
-
-**Frontend** — Vite + React 18, Ant Design, React Router v6, Framer Motion, GSAP, Firebase Storage, Google OAuth, GA4.
-
-**Backend** — Django 5 + Django REST Framework, SimpleJWT auth, PostgreSQL, AWS SES for email, Sentry (optional).
-
-**Infra (dev)** — Docker Compose brings up Django + Postgres + Nginx.
+This is a standalone fork — no dependency on any external Conquest site. Everything runs on your machine, and everything that used to be hardcoded (API URLs, OAuth, Firebase) is now something you configure.
 
 ---
 
-## Repo layout
+## Run it locally
 
-```
-conquest-portal/
-├── front/                  Vite + React SPA
-│   ├── src/config.js       single source of truth for env-driven config
-│   └── .env.example        frontend env vars
-└── back/conquest_back/     Django project
-    ├── conquest_back/      settings.py, urls.py
-    ├── users/ meetings/ forms/ staff/
-    ├── docker-compose.yaml
-    └── .env.example        backend env vars
-```
+You'll need **Docker**, **Node 18+**, and **Python 3.11+** (only if you poke around the backend outside Docker).
 
----
-
-## Quick start — frontend only (no backend)
-
-Good for UI work. Login and API-backed pages will not be functional.
-
-```bash
-cd front
-cp .env.example .env       # leave values blank for now
-npm install
-npm run dev                # → http://localhost:5173
-```
-
----
-
-## Full local setup
-
-### 1. Backend
+### 1. Start the backend
 
 ```bash
 cd back/conquest_back
-cp .env.example .env
-# edit .env — at minimum set DJANGO_SECRET_KEY, POSTGRES_PASSWORD
-docker compose up --build
-# API at http://localhost:9000  (via nginx: http://localhost:1399)
+cp .env.example .env        # defaults work for local dev
+docker compose up -d --build
 ```
 
-First run: open a new terminal and apply migrations + create a superuser:
+This brings up Django, Postgres, and Nginx. First build takes 3–5 minutes.
+
+### 2. Load seed data
 
 ```bash
-docker compose exec web python manage.py migrate
-docker compose exec web python manage.py createsuperuser
+docker exec conquest_back_web python manage.py loaddata dump_clean.json
 ```
 
-### 2. Frontend
+You get 232 users (real cohort: 27 startups + mentors + coaches + experts), 52 meeting slots, forms with answers — everything needed to click around.
+
+> If this errors with *contenttypes already exist*, run `docker exec conquest_back_web python manage.py shell -c "import json; data=json.load(open('dump.json')); json.dump([r for r in data if r['model'] not in ('contenttypes.contenttype','auth.permission')], open('dump_clean.json','w'))"` first to generate `dump_clean.json`.
+
+### 3. Create an admin account
+
+```bash
+docker exec conquest_back_web python manage.py shell -c "
+from django.contrib.auth.models import User
+u, _ = User.objects.get_or_create(username='admin', defaults={'is_staff':True, 'is_superuser':True})
+u.is_staff = True; u.is_superuser = True
+u.set_password('admin123'); u.save()"
+```
+
+### 4. Start the frontend
 
 ```bash
 cd front
@@ -74,111 +55,130 @@ npm install
 npm run dev
 ```
 
+Open **http://localhost:5173**.
+
 ---
 
-## Environment variables
+## Log in
 
-### Frontend (`front/.env`)
+After loading seed data, every user's password is whatever `set_password` you ran (during dev, `password123` is the convention if you batch-reset all users — see *Resetting passwords* below).
 
-| Variable | What it is |
+| Role | Username to try |
 |---|---|
-| `VITE_API_BASE_URL` | Backend origin. `http://localhost:9000` for local dev. |
-| `VITE_MARKETING_SITE_URL` | Your marketing/brochure site (alumni/about/privacy pages linked from nav and footer). Leave blank to make those links no-ops. |
-| `VITE_CONTACT_EMAIL` | Public contact email shown in footer. |
-| `VITE_GA_MEASUREMENT_ID` | Google Analytics 4 ID (`G-XXXX...`). Leave blank to disable. |
-| `VITE_GOOGLE_OAUTH_CLIENT_ID` | OAuth 2.0 Web Client ID for "Sign in with Google". |
-| `VITE_FIREBASE_*` | Firebase web app config — used for user file uploads to Firebase Storage. |
+| Test startup | `startup1`, `startup2`, `startup3` |
+| Real startup | `Prodancy419`, `RTIwala771`, `subtl.ai571`, `Alchemyst386`, `Qlan506` (many more) |
+| Mentor | `mentor1`, `mentor2` |
+| Coach | `coach1`, `coach2` |
+| Expert | `expert1`, `expert2` |
+| Admin | `admin` (password `admin123`) |
 
-### Backend (`back/conquest_back/.env`)
+The Django admin (for admin-level edits) lives at **http://localhost:1399/api/admin/**.
 
-| Variable | What it is |
-|---|---|
-| `DJANGO_SECRET_KEY` | Long random string. `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"` |
-| `DJANGO_DEBUG` | `True` for dev, `False` for prod. |
-| `DJANGO_ALLOWED_HOSTS` | Comma-separated hostnames the backend will answer on. |
-| `DJANGO_CORS_ALLOWED_ORIGINS` | Comma-separated full frontend URLs (include scheme). |
-| `DJANGO_CSRF_TRUSTED_ORIGINS` | Same format. Usually same list as CORS. |
-| `POSTGRES_*` | DB name/user/password/host/port. |
-| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION_NAME` | Credentials for SES (outbound email). |
-| `DEFAULT_FROM_EMAIL` | Verified sender address in SES. |
-| `SENTRY_DSN` | Optional. Leave blank to disable Sentry. |
+### Resetting passwords
 
----
-
-## How to get each credential
-
-### Google OAuth Client ID (for "Sign in with Google")
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/).
-2. Create a new project (or pick an existing one).
-3. Enable the "Google Identity" / People API.
-4. Navigate to **APIs & Services → Credentials → Create Credentials → OAuth client ID**.
-5. Configure the consent screen first if prompted (External, add your email as a test user).
-6. Application type: **Web application**.
-7. Authorized JavaScript origins: add `http://localhost:5173` (and your production URL).
-8. Authorized redirect URIs: add `http://localhost:5173` (and prod).
-9. Copy the **Client ID** → `VITE_GOOGLE_OAUTH_CLIENT_ID`.
-
-### Firebase web app (for file uploads)
-
-1. Go to [Firebase Console](https://console.firebase.google.com/).
-2. **Add project** → follow wizard.
-3. In the project, click the **web icon (`</>`) to add a web app**.
-4. Firebase gives you a config object with `apiKey`, `authDomain`, etc. Copy each value into the matching `VITE_FIREBASE_*` env var.
-5. In the left nav: **Build → Storage → Get started**. Pick a region, start in test mode for dev (tighten rules before prod).
-
-### Google Analytics 4 Measurement ID
-
-1. Go to [Google Analytics](https://analytics.google.com/).
-2. Admin → Create property → fill in details → finish.
-3. Add a **Data Stream** (Web) for your portal URL.
-4. Copy the **Measurement ID** (`G-XXXXXXXXXX`) → `VITE_GA_MEASUREMENT_ID`.
-
-### AWS SES (for outbound email)
-
-1. [AWS Console](https://console.aws.amazon.com/) → **SES**.
-2. Pick a region (matches `AWS_REGION_NAME`, default `ap-south-1`).
-3. **Verified identities → Create identity**: verify your sender email or domain. Without this, SES refuses to send.
-4. New accounts start in **sandbox mode** — can only send to verified recipients. Request production access from the SES console when ready.
-5. **IAM → Users → Create user** with programmatic access and the policy `AmazonSESFullAccess` (or a scoped `ses:SendEmail` policy).
-6. Grab the access key and secret → `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`.
-7. Set `DEFAULT_FROM_EMAIL` to your verified sender.
-
-### Sentry DSN (optional)
-
-1. [Sentry.io](https://sentry.io/) → create project (platform: Django).
-2. Copy the DSN shown during setup → `SENTRY_DSN`.
-3. Leave blank to disable.
-
----
-
-## Useful commands
+If you just loaded the dump and logins don't work, the dump's password hashes are old. Batch-reset everyone to a known password:
 
 ```bash
-# Backend
-docker compose up --build              # start everything
-docker compose down                    # stop
-docker compose exec web python manage.py migrate
-docker compose exec web python manage.py createsuperuser
-docker compose exec web python manage.py shell
-
-# Frontend
-npm run dev                            # dev server
-npm run build                          # production build → dist/
-npm run preview                        # preview the production build
-npm run lint
+docker exec conquest_back_web python manage.py shell -c "
+from django.contrib.auth.models import User
+for u in User.objects.all():
+    u.set_password('password123'); u.save()"
 ```
 
 ---
 
-## Notes
+## What works out of the box vs. what needs credentials
 
-- `back/conquest_back/dump.json` is a legacy data fixture from the original deployment. Safe to delete if you don't need it.
-- `back/conquest_back/serverNginx*.txt` are deployment notes, not live config. The active nginx config is `back/conquest_back/nginx/default.conf`.
-- The in-app "Sign in with Google" button requires **both** `VITE_GOOGLE_OAUTH_CLIENT_ID` on the frontend and the backend endpoint `/api/users/login/google/` to be able to verify tokens (the backend uses `google-auth` libs, which work out of the box as long as the client ID matches what the frontend sends).
+| Feature | Needs | Without it |
+|---|---|---|
+| Username/password login | Nothing | ✅ Works |
+| All dashboards, meetings, forms, connections | Nothing | ✅ Works |
+| Django admin | Just `createsuperuser` | ✅ Works |
+| **Sign in with Google** | Google OAuth Client ID | Button appears, login fails |
+| **File uploads (forms, logos)** | Firebase project | Upload fails |
+| Outbound email (password resets, invites) | AWS SES account | Email actions silently fail |
+| Analytics | GA4 Measurement ID | No analytics, app works fine |
+
+If you don't need a feature, leave the corresponding env var blank and the app won't complain.
 
 ---
 
-## License
+## Getting credentials (only when you need them)
 
-TBD — add a license file before making this public-facing.
+### Google Sign-In
+
+1. Go to <https://console.cloud.google.com/>, create (or pick) a project.
+2. **APIs & Services → OAuth consent screen** — External, fill in app name and your email, add yourself as a test user.
+3. **APIs & Services → Credentials → Create OAuth client ID** → Web application.
+4. Authorized JavaScript origins: `http://localhost:5173`. Redirect URIs: same.
+5. Copy the Client ID into `front/.env` as `VITE_GOOGLE_OAUTH_CLIENT_ID`.
+6. Restart `npm run dev`.
+
+### Firebase Storage (for file uploads)
+
+1. Go to <https://console.firebase.google.com/>, create a project.
+2. Click the **web (`</>`) icon** to register a web app.
+3. Firebase shows a config snippet. Copy each `apiKey`, `authDomain`, `projectId`, `storageBucket`, `messagingSenderId`, `appId` into the matching `VITE_FIREBASE_*` in `front/.env`.
+4. In the project sidebar: **Build → Storage → Get started** (test mode is fine for dev).
+5. Restart `npm run dev`.
+
+### Outbound email (AWS SES)
+
+1. <https://console.aws.amazon.com/> → **SES** (pick a region — default in `.env` is `ap-south-1`).
+2. **Verified identities → Create identity** — verify the email or domain you want to send from. SES will not send from unverified senders.
+3. SES starts in *sandbox mode* (only sends to verified recipients). Request production access when ready to send to real users.
+4. **IAM → Users → Create user** with programmatic access and policy `AmazonSESFullAccess` (or scoped to `ses:SendEmail`).
+5. Copy the access key and secret into `back/conquest_back/.env`:
+   ```
+   AWS_ACCESS_KEY_ID=...
+   AWS_SECRET_ACCESS_KEY=...
+   DEFAULT_FROM_EMAIL=whatever-you-verified@your-domain.com
+   ```
+6. Restart the backend: `docker compose -f back/conquest_back/docker-compose.yaml up -d`.
+
+### Google Analytics (optional)
+
+1. <https://analytics.google.com/> → Admin → Create property → Web data stream.
+2. Copy the Measurement ID (`G-XXXXXXXXXX`) into `VITE_GA_MEASUREMENT_ID` in `front/.env`.
+
+---
+
+## URLs at a glance
+
+| | |
+|---|---|
+| Portal | http://localhost:5173 |
+| Django admin (styled) | http://localhost:1399/api/admin/ |
+| API (for tools and curl) | http://localhost:9000/api/ |
+| Postgres | localhost:5437 |
+
+---
+
+## Troubleshooting
+
+**Nothing loads on 5173 / blank page flashes then disappears**
+Open DevTools console. If you see *"GoogleOAuthProvider"*, `main.jsx` is expecting a valid OAuth client ID — we handle this with a placeholder, so a plain refresh usually fixes it.
+
+**Login returns `{"message":"Invalid credentials."}`**
+User probably doesn't exist with that exact username, or the dump's password hash is stale. Verify the user: `docker exec conquest_back_web python manage.py shell -c "from django.contrib.auth.models import User; print(User.objects.filter(username__icontains='prodancy'))"`. Batch-reset passwords with the snippet above.
+
+**Django admin has no styling**
+You hit port 9000 directly. Gunicorn doesn't serve static files. Use <http://localhost:1399/api/admin/> instead — nginx serves static there.
+
+**`postgres_conquest` container keeps exiting**
+Image version drift. `back/conquest_back/docker-compose.yaml` pins `postgres:16`; if you're on an older fork, bump it.
+
+**`npm install` fails on something about `website-overlay/vite`**
+This project wires in [website-overlay](https://github.com/aryanjain1891/website-overlay) as a dev dependency. If you don't have it locally, either clone+build it and `npm install file:../website-overlay` from `front/`, or remove the plugin from `front/vite.config.js`.
+
+---
+
+## Project structure (only if you're digging in)
+
+```
+conquest-portal/
+├── front/                React SPA (Vite). All config in src/config.js.
+└── back/conquest_back/   Django + DRF. Env-driven settings.
+```
+
+Backend apps: `users`, `meetings`, `forms`, `staff`. Frontend routes: `src/routes/Dashboard/*` — one folder per section (Startups, Mentors, Meetings, Forms, etc.).

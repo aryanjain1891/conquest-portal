@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     ports:
-      - "9000:8000"
+      - "9000:9000"
       - "587:587"
     command: ["sh", "./start.sh"]
     env_file:
@@ -33,7 +33,7 @@ services:
 
   db:
     container_name: postgres_conquest
-    image: postgres
+    image: postgres:16
     ports:
       - "5437:5432"
     volumes:
