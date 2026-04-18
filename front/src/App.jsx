@@ -23,7 +23,6 @@ import Experts from "./routes/Dashboard/Experts/Experts";
 import Mentors from "./routes/Dashboard/Mentors/Mentors";
 import Connections from "./routes/Dashboard/Connections/Connections";
 import Forms from "./routes/Dashboard/Forms/Forms";
-import Developers from "./routes/Dashboard/Developers/Developers";
 import Coaches from "./routes/Dashboard/Coaches/Coaches";
 import Resources from "./routes/Dashboard/Resources/Resources";
 import Investors from "./routes/Dashboard/Investors/Investors";
@@ -116,7 +115,6 @@ function App() {
         <Route path="dashboard" element={<Dashboard />}>
           <Route path="meetings" element={<Meetings />}></Route>
           <Route path="resources" element={<Resources />}></Route>
-          <Route path="developers" element={<Developers />}></Route>
           <Route path="startups" element={<Startups />}></Route>
           <Route path="partners" element={<Investors />}></Route>
           <Route path="angels" element={<Angels />}></Route>

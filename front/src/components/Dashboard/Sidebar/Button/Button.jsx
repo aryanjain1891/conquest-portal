@@ -14,8 +14,7 @@ const Button = ({ active, text, handleButtonClick, link }) => {
           handleButtonClick(text);
           e.preventDefault();
           navigate(`${link}`);
-        }
-        else {
+        } else if (MARKETING_SITE_URL) {
           window.open(`${MARKETING_SITE_URL}/process/`, "_self");
         }
       }}

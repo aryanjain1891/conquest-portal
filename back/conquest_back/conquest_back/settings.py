@@ -240,8 +240,17 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 524880
 
 
 
-# Email settings
-EMAIL_BACKEND = 'django_ses.SESBackend'
+# Email settings.
+#   dummy   → silently drop all mail (demo / dev default).
+#   console → print mail to stdout.
+#   ses     → real SES send. Requires AWS_* env vars.
+_email_mode = os.getenv('EMAIL_MODE', 'dummy').lower()
+if _email_mode == 'ses':
+    EMAIL_BACKEND = 'django_ses.SESBackend'
+elif _email_mode == 'console':
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.dummy.EmailBackend'
 AWS_SES_REGION_NAME = os.getenv('AWS_REGION_NAME', 'ap-south-1')
 AWS_SES_REGION_ENDPOINT = f'email.{AWS_SES_REGION_NAME}.amazonaws.com'
 
