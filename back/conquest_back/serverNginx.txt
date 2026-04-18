@@ -1,0 +1,58 @@
+upstream conquest_api{
+	server localhost:1399;
+}
+
+server {
+    server_name ****;
+
+    location / {
+        proxy_pass ***;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    listen [::]:443 ssl; # managed by Certbot
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate ***; # managed by Certbot
+    ssl_certificate_key ***; # managed by Certbot
+    include **; # managed by Certbot
+    ssl_dhparam **; # managed by Certbot
+}
+
+server {
+    if ($host = conquest-api.bits-dvm.org) {
+        return 301 https://$host$request_uri;
+    }
+
+    server_name conquest-api.bits-dvm.org;
+    listen 80;
+    listen [::]:80;
+    return 404;
+}
+
+---
+generated certs for the subdomain:
+sudo certbot --nginx -d conquest-api.bits-dvm.org
+
+create the config here 
+sudo nano /etc/nginx/sites-available/conquest-api 
+
+create symLink then::
+sudo ln -s /etc/nginx/sites-available/conquest-api /etc/nginx/sites-enabled/
+
+test syntax of nginx: sudo nginx -t 
+
+reload nginx
+sudo nginx -s reload
+or sudo systemctl reload nginx
+---
+
+Basically what is happening is: main server nginx is redirecting to container nginx which is serving our webapp
+Server Nginx => container Nginx => webapp
+
+restart specific container without restarting dependency
+docker-compose up -d --no-deps --build nginx
+
+---
+

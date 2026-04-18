@@ -1,0 +1,64 @@
+version: "3.8"
+
+services:
+  web:
+    container_name: conquest_back_web
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "9000:8000"
+      - "587:587"
+    command: ["sh", "./start.sh"]
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/home/app/web
+      - staticfiles:/home/app/web/staticfiles
+      - mediafiles:/home/app/web/mediafiles
+  
+  nginx:
+    container_name: nginx_conquest
+    build: ./nginx
+    volumes: 
+      - staticfiles:/home/app/web/staticfiles
+      - ./nginx:/etc/nginx/conf.d
+    ports:
+      - 1399:80
+    depends_on:
+      - web
+
+  db:
+    container_name: postgres_conquest
+    image: postgres
+    ports:
+      - "5437:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -q -d ${POSTGRES_DB} -U ${POSTGRES_USER}"] 
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres-data:
+  staticfiles:
+  mediafiles:
+
+
+#notes
+#cmd_shell = special token recognized by Docker's health check system.
+# pg_isready = PostgreSQL utility that checks the readiness of a PostgreSQL server to accept connections.
+# q = quiet mode, reports the server's readiness without producing any additional output.
+
+
+
+

@@ -1,0 +1,38 @@
+# Env files
+.env
+.env.local
+.env.*.local
+*.env
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.Python
+
+# Django
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+*.log
+
+# Docker
+.docker/
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+Thumbs.db

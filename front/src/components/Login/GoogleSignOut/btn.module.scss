@@ -1,0 +1,15 @@
+.btn {
+    aspect-ratio: 354 / 55;
+    border: none;
+    border-radius: 0.625rem;
+    background: #FB723D;
+    display: flex;
+    width: 30%;
+    padding: 0.75rem 1.5rem;
+    justify-content: center;
+    align-items: center;
+    gap: 0.625rem;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+}

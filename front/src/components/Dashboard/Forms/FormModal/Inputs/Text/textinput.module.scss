@@ -1,0 +1,66 @@
+.inputGrp {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 12px;
+
+    .label {
+        font-size: 24px;
+        font-weight: 500;
+        line-height: 100%;
+    }
+
+    .inputField {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        position: relative;
+
+        .input {
+            border-radius: 8px;
+            border: 1px solid #BFBFBF;
+            background: #FFF;
+            width: 100%;
+            overflow-y: auto;
+            resize: none;
+
+
+            &:focus {
+                outline: none;
+            }
+
+            &.link,
+            &.short {
+                aspect-ratio: 850 / 45;
+                padding: 0px 10px;
+            }
+
+            &.long {
+                height: 163px;
+                padding: 10px;
+
+                @media screen and (max-width: 820px) {
+                    height: 200px;
+                }
+            }
+
+            &.error {
+                border: 1.5px solid #EB0E00;
+                background: #FFE6E6;
+            }
+        }
+
+        .invalidInpIcon {
+            aspect-ratio: 1 / 1;
+            position: absolute;
+            right: -1.8rem;
+            width: 1.3rem;
+        }
+    }
+
+    .errMsg {
+        font-weight: 400;
+        font-size: 0.75em;
+        color: #EB0E00;
+    }
+}
